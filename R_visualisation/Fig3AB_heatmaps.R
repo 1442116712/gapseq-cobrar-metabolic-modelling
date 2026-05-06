@@ -3,12 +3,15 @@
 #
 # Panel A: Auxotrophy heatmap. Cells are coloured by category.
 #
-# Panel B: Substrate preference heatmap, full set (100 compounds)
-#   - Reads single_all_substrates and pandraft_all_substrates
-#     (already pre-filtered to Net_Growth >= 0.1 by the user).
-#   - 100 compounds manually classified into 8 categories, shown
-#     as a thin coloured strip above the heatmap. Empty columns
-#     between categories visually separate the groups.
+# Panel B: Substrate preference heatmap.
+#   - Reads single_all_substrates and pandraft_all_substrates and
+#     applies the active-substrate threshold Net_Growth >= 0.01 h^-1
+#     (gapseq default). Below-threshold rows in the supplementary
+#     sheets are exchange-flux artefacts (CO2, urea, methane, fatty
+#     acids etc.) and are excluded from the heatmap.
+#   - 117 surviving compounds are mapped onto 8 manual categories
+#     (see Supplementary Table SX), shown as a coloured strip above
+#     the heatmap. Empty columns separate adjacent categories.
 #   - Within each category, compounds are ordered by the number
 #     of organisms with a hit (most to least).
 #   - Cells use a pseudo_log gradient (sigma = 0.1) on Net_Growth
@@ -38,7 +41,8 @@ xlsx_path <- "C:/Users/CFL/OneDrive - Queen's University Belfast/PhD_onedrive/Ma
 out_dir   <- "C:/Users/CFL/OneDrive - Queen's University Belfast/PhD_onedrive/Manuscript4/figures"
 dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
 
-LOG_SIGMA <- 0.1   # pseudo-log compression for Panel B fill
+LOG_SIGMA     <- 0.1    # pseudo-log compression for Panel B fill
+SUB_THRESHOLD <- 0.01   # active-substrate threshold (gapseq default, h^-1)
 
 # ---------- Palettes ----------
 aux_pal <- c(
@@ -48,7 +52,6 @@ aux_pal <- c(
   "Other"            = "#7F8C8D"
 )
 
-# Plan A - muted palette (saturation reduced from default scheme)
 cat_pal <- c(
   "Amino acids"               = "#88BBA1",
   "Mono- & disaccharides"     = "#E8B080",
@@ -62,16 +65,23 @@ cat_pal <- c(
 cat_levels <- names(cat_pal)
 
 # ---------- Compound -> category dictionary ----------
+# Sourced from Supplementary Table SX. Mapping derived from KEGG BRITE
+# br08001 + ModelSEED Biochemistry, with two adaptations: (i) carbohydrates
+# split by degree of polymerisation; (ii) cofactor / aldehyde / bile acid
+# / mucin-glycan compounds collected into "Other".
 compound_category <- c(
-  # Amino acids (14)
+  # Amino acids (19): proteinogenic + Ornithine + GABA + D-isomers
   cpd00023 = "Amino acids", cpd00033 = "Amino acids",
-  cpd00035 = "Amino acids", cpd00041 = "Amino acids",
+  cpd00035 = "Amino acids", cpd00039 = "Amino acids",
+  cpd00041 = "Amino acids", cpd00051 = "Amino acids",
   cpd00053 = "Amino acids", cpd00054 = "Amino acids",
   cpd00060 = "Amino acids", cpd00064 = "Amino acids",
   cpd00065 = "Amino acids", cpd00084 = "Amino acids",
-  cpd00117 = "Amino acids", cpd00132 = "Amino acids",
-  cpd00161 = "Amino acids", cpd00550 = "Amino acids",
-  # Mono- & disaccharides (17)
+  cpd00117 = "Amino acids", cpd00129 = "Amino acids",
+  cpd00132 = "Amino acids", cpd00156 = "Amino acids",
+  cpd00161 = "Amino acids", cpd00281 = "Amino acids",
+  cpd00550 = "Amino acids",
+  # Mono- & disaccharides (17): hexoses, pentoses, deoxy-sugars + DP=2
   cpd00027 = "Mono- & disaccharides", cpd00076 = "Mono- & disaccharides",
   cpd00082 = "Mono- & disaccharides", cpd00105 = "Mono- & disaccharides",
   cpd00108 = "Mono- & disaccharides", cpd00138 = "Mono- & disaccharides",
@@ -84,7 +94,7 @@ compound_category <- c(
   # Amino sugars (4)
   cpd00122 = "Amino sugars", cpd00232 = "Amino sugars",
   cpd00276 = "Amino sugars", cpd00832 = "Amino sugars",
-  # Oligo- & polysaccharides (17)
+  # Oligo- & polysaccharides (17): DP >= 3
   cpd00155 = "Oligo- & polysaccharides", cpd00382 = "Oligo- & polysaccharides",
   cpd01133 = "Oligo- & polysaccharides", cpd01262 = "Oligo- & polysaccharides",
   cpd01399 = "Oligo- & polysaccharides", cpd11976 = "Oligo- & polysaccharides",
@@ -94,32 +104,39 @@ compound_category <- c(
   cpd90007 = "Oligo- & polysaccharides", cpd90008 = "Oligo- & polysaccharides",
   cpd90020 = "Oligo- & polysaccharides", cpd90021 = "Oligo- & polysaccharides",
   cpd90022 = "Oligo- & polysaccharides",
-  # Sugar alcohols & alcohols (10)
+  # Sugar alcohols & alcohols (11): polyols + simple alcohols
   cpd00080 = "Sugar alcohols & alcohols", cpd00100 = "Sugar alcohols & alcohols",
-  cpd00306 = "Sugar alcohols & alcohols", cpd00314 = "Sugar alcohols & alcohols",
-  cpd00363 = "Sugar alcohols & alcohols", cpd00366 = "Sugar alcohols & alcohols",
-  cpd00453 = "Sugar alcohols & alcohols", cpd00588 = "Sugar alcohols & alcohols",
-  cpd01861 = "Sugar alcohols & alcohols", cpd03662 = "Sugar alcohols & alcohols",
-  # Organic & sugar acids (16)
+  cpd00116 = "Sugar alcohols & alcohols", cpd00306 = "Sugar alcohols & alcohols",
+  cpd00314 = "Sugar alcohols & alcohols", cpd00363 = "Sugar alcohols & alcohols",
+  cpd00366 = "Sugar alcohols & alcohols", cpd00453 = "Sugar alcohols & alcohols",
+  cpd00588 = "Sugar alcohols & alcohols", cpd01861 = "Sugar alcohols & alcohols",
+  cpd03662 = "Sugar alcohols & alcohols",
+  # Organic & sugar acids (20): TCA intermediates + SCFAs + sugar acids
   cpd00020 = "Organic & sugar acids", cpd00024 = "Organic & sugar acids",
+  cpd00029 = "Organic & sugar acids", cpd00036 = "Organic & sugar acids",
   cpd00059 = "Organic & sugar acids", cpd00106 = "Organic & sugar acids",
   cpd00130 = "Organic & sugar acids", cpd00137 = "Organic & sugar acids",
-  cpd00139 = "Organic & sugar acids", cpd00159 = "Organic & sugar acids",
-  cpd00176 = "Organic & sugar acids", cpd00221 = "Organic & sugar acids",
+  cpd00139 = "Organic & sugar acids", cpd00141 = "Organic & sugar acids",
+  cpd00159 = "Organic & sugar acids", cpd00176 = "Organic & sugar acids",
+  cpd00180 = "Organic & sugar acids", cpd00221 = "Organic & sugar acids",
   cpd00222 = "Organic & sugar acids", cpd00280 = "Organic & sugar acids",
   cpd00573 = "Organic & sugar acids", cpd00609 = "Organic & sugar acids",
   cpd00653 = "Organic & sugar acids", cpd22614 = "Organic & sugar acids",
-  # Nucleosides & bases (10)
+  # Nucleosides & bases (11)
   cpd00092 = "Nucleosides & bases", cpd00182 = "Nucleosides & bases",
   cpd00184 = "Nucleosides & bases", cpd00246 = "Nucleosides & bases",
   cpd00249 = "Nucleosides & bases", cpd00307 = "Nucleosides & bases",
-  cpd00311 = "Nucleosides & bases", cpd00355 = "Nucleosides & bases",
-  cpd00367 = "Nucleosides & bases", cpd01217 = "Nucleosides & bases",
-  # Other (12): cofactor artefacts, aldehydes, bile acids, mucin glycans
+  cpd00309 = "Nucleosides & bases", cpd00311 = "Nucleosides & bases",
+  cpd00355 = "Nucleosides & bases", cpd00367 = "Nucleosides & bases",
+  cpd01217 = "Nucleosides & bases",
+  # Other (19): cofactor artefacts, ROS, gases, aldehydes, sulfonates,
+  # aromatic intermediates, bile acids, mucin glycans
   cpd00003 = "Other", cpd00006 = "Other", cpd00007 = "Other",
-  cpd00012 = "Other", cpd11606 = "Other",
-  cpd00071 = "Other", cpd00371 = "Other", cpd00448 = "Other",
-  cpd01318 = "Other", cpd03247 = "Other",
+  cpd00010 = "Other", cpd00012 = "Other", cpd11606 = "Other",
+  cpd00025 = "Other", cpd00055 = "Other",
+  cpd00071 = "Other", cpd00229 = "Other", cpd00371 = "Other",
+  cpd00448 = "Other", cpd00204 = "Other", cpd00210 = "Other",
+  cpd00216 = "Other", cpd01318 = "Other", cpd03247 = "Other",
   cpd02992 = "Other", cpd11842 = "Other"
 )
 
@@ -186,8 +203,8 @@ aux_class <- function(x) {
 
 shorten_compound <- function(x) {
   case_when(
-    grepl("^N-Acetyl-beta-D-glucosaminyl-1,6", x) ~ "GlcNAcβ1-6",
-    grepl("^N-Acetyl-beta-D-glucosaminyl-1,3", x) ~ "GlcNAcβ1-3",
+    grepl("^N-Acetyl-beta-D-glucosaminyl-1,6", x) ~ "GlcNAc\u03b21-6",
+    grepl("^N-Acetyl-beta-D-glucosaminyl-1,3", x) ~ "GlcNAc\u03b21-3",
     grepl("^starch \\(n=27", x)         ~ "Starch (n=27)",
     grepl("^starch \\(n=19", x)         ~ "Starch (n=19)",
     grepl("^Inulin", x)                  ~ "Inulin",
@@ -262,19 +279,31 @@ p_a <- ggplot(aux_long_A, aes(x = compound, y = organism, fill = category)) +
 pan_sub    <- read_excel(xlsx_path, sheet = "pandraft_all_substrates")
 single_sub <- read_excel(xlsx_path, sheet = "single_all_substrates")
 
+# Apply active-substrate threshold (gapseq default 0.01 h^-1).
+# Below-threshold rows in the supplementary sheets are exchange-flux
+# artefacts (CO2, urea, methane, fatty acids, etc.) and are excluded.
 sub_all <- bind_rows(
-  pan_sub    %>% filter(organism %in% pan_targets) %>%
+  pan_sub    %>% filter(organism %in% pan_targets,
+                        Net_Growth >= SUB_THRESHOLD) %>%
     select(organism, cpd_id, compound, Net_Growth),
-  single_sub %>% filter(organism %in% single_targets) %>%
+  single_sub %>% filter(organism %in% single_targets,
+                        Net_Growth >= SUB_THRESHOLD) %>%
     select(organism, cpd_id, compound, Net_Growth)
 ) %>%
   mutate(category = factor(compound_category[cpd_id], levels = cat_levels))
+
+cat(sprintf("Active substrates after threshold (>= %.2f h^-1): %d rows, %d compounds\n",
+            SUB_THRESHOLD, nrow(sub_all), n_distinct(sub_all$cpd_id)))
 
 # Sanity check: any compound not assigned a category?
 unmapped <- sub_all %>% filter(is.na(category)) %>% distinct(cpd_id, compound)
 if (nrow(unmapped) > 0) {
   warning(sprintf("Unmapped compounds (no category): %s",
                   paste(unmapped$cpd_id, collapse = ", ")))
+  cat("\n=== UNMAPPED compounds (need to be added to compound_category) ===\n")
+  print(unmapped)
+} else {
+  cat("All active substrates are categorised.\n")
 }
 
 # Within-category ordering by organism count
@@ -299,7 +328,6 @@ for (i in seq_len(nrow(compound_hits))) {
   prev_cat <- cur_cat
 }
 
-# X-axis label function: hide gaps, shorten real names
 x_label_fn <- function(x) ifelse(grepl("^__gap_", x), "", shorten_compound(x))
 
 # ---------- Panel B strip ----------
@@ -375,11 +403,10 @@ p_heat_B <- ggplot(heat_df_B, aes(x = compound, y = organism, fill = Net_Growth)
     plot.margin         = margin(0, 0, 0, 0)
   )
 
-# Combine Panel B: strip on top (very thin), heatmap below
 panel_B <- p_strip_B / p_heat_B + plot_layout(heights = c(0.05, 1))
 
 # =============================================================
-# Final figure: Panel A on top, Panel B below
+# Final figure
 # =============================================================
 fig <- p_a / panel_B + plot_layout(heights = c(0.7, 1.4))
 
@@ -388,14 +415,14 @@ ggsave(out_path, fig,
        width = 16, height = 14, units = "in",
        dpi = 1000, bg = "white")
 
-cat(sprintf("Saved: %s\n", out_path))
+cat(sprintf("\nSaved: %s\n", out_path))
 cat(sprintf("Panel B: %d compounds, %d categories\n",
             length(compound_order_real), length(unique(compound_hits$category))))
 cat(sprintf("Pseudo-log: sigma = %g, base = 10\n", LOG_SIGMA))
 cat(sprintf("Max Net_Growth = %.3f\n", max_growth))
 
 # ---------- Diagnostics ----------
-cat("\n=== Compound counts per category ===\n")
+cat("\n=== Compound counts per category (post-threshold) ===\n")
 print(compound_hits %>% count(category, name = "n_compounds"))
 
 cat("\n=== Y-axis order ===\n")
@@ -404,4 +431,3 @@ for (i in seq_along(y_axis_order)) {
   cat(sprintf("  %2d. %-30s  %s\n",
               i, y_axis_order[i], m_summary$class[i]))
 }
-
