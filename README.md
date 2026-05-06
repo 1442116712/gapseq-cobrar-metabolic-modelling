@@ -177,7 +177,7 @@ The `leave_one_out.R` script performs three procedures:
 2. **Trace-limited background**. All organic exchanges are constrained to −0.05 mmol gDW⁻¹ hr⁻¹; identified auxotrophies are fully opened to −10 to ensure structural availability.
 3. **Substrate scan**. Each candidate organic exchange is opened to −10 in turn; growth and total flux are recorded by parsimonious FBA (pFBA, GLPK solver via `cobrar`).
 
-Net growth is computed as growth on substrate minus trace background growth; substrates with net growth > 0.1 hr⁻¹ are reported as active.
+Net growth is computed as growth on substrate minus trace background growth; substrates with net growth > 0.01 hr⁻¹ are reported as active.
 
 ### Known limitations
 
