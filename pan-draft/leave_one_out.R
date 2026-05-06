@@ -109,7 +109,7 @@ write.table(results_df[order(-results_df$Net_Growth), ],
             out_path("_substrates_full.tsv"),
             sep = "\t", quote = FALSE, row.names = FALSE)
 
-active <- results_df[results_df$Net_Growth > 0.1, ]
+active <- results_df[results_df$Net_Growth > 0.01, ]
 active <- active[order(-active$Net_Growth, active$Total_Flux), ]
 write.table(head(active, 15),
             out_path("_substrates_top15.tsv"),
