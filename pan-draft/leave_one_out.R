@@ -75,7 +75,7 @@ for (rxn in organics) {
   }
 }
 if (length(dynamic_auxotrophies) > 0) {
-  mod_trace <- changeBounds(mod_trace, react = dynamic_auxotrophies, lb = -10)
+  mod_trace <- changeBounds(mod_trace, react = dynamic_auxotrophies, lb = -0.1)
 }
 bg_growth <- tryCatch(pfba(mod_trace)@obj, error = function(e) 0)
 cat(sprintf("    -> Trace bg growth: %.4f hr^-1\n", bg_growth))
