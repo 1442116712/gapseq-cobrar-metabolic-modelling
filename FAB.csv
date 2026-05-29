@@ -1,0 +1,61 @@
+compounds,name,maxFlux
+cpd00001,H2O,100
+cpd00067,H+,100
+cpd00009,Phosphate,100
+cpd00013,NH3,100
+cpd00048,Sulfate,100
+cpd00205,K+,100
+cpd00254,Mg2+,100
+cpd00971,Na+,100
+cpd00099,Cl-,85
+cpd00011,CO2,100
+cpd00242,HCO3-,10
+cpd00084,L-Cysteine,8
+cpd00431,Thioglycollate,9
+cpd00028,Heme,0.015
+cpd15560,Vitamin K1/K2,0.002
+cpd00239,H2S,0.1
+cpd00035,L-Alanine,2
+cpd00051,L-Arginine,2
+cpd00132,L-Asparagine,2
+cpd00041,L-Aspartate,2
+cpd00023,L-Glutamate,2
+cpd00053,L-Glutamine,2
+cpd00033,Glycine,2
+cpd00119,L-Histidine,2
+cpd00322,L-Isoleucine,2
+cpd00107,L-Leucine,2
+cpd00039,L-Lysine,2
+cpd00060,L-Methionine,2
+cpd00066,L-Phenylalanine,2
+cpd00129,L-Proline,2
+cpd00054,L-Serine,2
+cpd00161,L-Threonine,2
+cpd00065,L-Tryptophan,2
+cpd00069,L-Tyrosine,2
+cpd00156,L-Valine,2
+cpd00305,Vitamin B1,0.002
+cpd00220,Vitamin B2,0.002
+cpd00218,Vitamin B3,0.05
+cpd00644,Vitamin B5,0.005
+cpd00215,Vitamin B6,0.002
+cpd00104,Biotin,0.0002
+cpd00393,Vitamin B9,0.0005
+cpd00063,Ca2+,0.5
+cpd00030,Mn2+,0.001
+cpd00034,Zn2+,0.005
+cpd00058,Cu2+,0.001
+cpd10515,Fe2+,0.002
+cpd10516,fe3,0.002
+cpd00128,Adenine,0.25
+cpd00207,Guanine,0.25
+cpd00092,Uracil,0.25
+cpd00307,Cytosine,0.25
+cpd00226,Hypoxanthine,0.25
+cpd00309,Xanthine,0.25
+cpd00182,Adenosine,0.1
+cpd00184,Thymidine,0.1
+cpd00246,Inosine,0.1
+cpd00249,Uridine,0.1
+cpd00311,Guanosine,0.1
+cpd00367,Cytidine,0.1
