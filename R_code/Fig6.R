@@ -285,3 +285,75 @@ cat("Saved: Fig_substrate_assay.png (panels A-F, full page)\n")
 write.csv(summ,      file.path(out_dir, "Fig_substrate_assay_summary.csv"), row.names = FALSE)
 write.csv(resc_summ, file.path(out_dir, "Fig_substrate_rescue_summary.csv"), row.names = FALSE)
 cat("Summary CSVs saved.\n")
+
+# =============================================================
+# Planned-contrast statistics: SH_0542 FAB substrate factorial (Experiment B)
+# -------------------------------------------------------------
+# Reproduces Supplementary Table S12g. Each supplemented condition is compared
+# with the FAB-alone baseline by Dunnett's many-to-one test (single-step,
+# family-wise error controlled), on the primary 72-h endpoint OD600 and, as
+# secondary readouts, AUC 0-72 h and 24-h endpoint OD600. Effects are the mean
+# difference from baseline with simultaneous 95% CIs and adjusted p values.
+# Requires the 'multcomp' package; if absent, this block is skipped and the
+# figure output above is unaffected (install.packages("multcomp") to enable).
+# =============================================================
+if (!requireNamespace("multcomp", quietly = TRUE)) {
+  message("Package 'multcomp' not installed; skipping S12g planned-contrast statistics.")
+} else {
+  tcol <- paste0("t", time_pts)   # time_pts = c(0:15, 22, 23, 24, 48, 72)
+
+  fab_B <- data %>%
+    filter(strain_tag == "SH542", experiment == "B") %>%
+    mutate(condition = factor(condition,
+      levels = c("Baseline", "+ maltose", "+ strain-specific",
+                 "+ thiamine", "+ all three", "+ urea (negative)")))
+
+  Mat     <- as.matrix(sapply(fab_B[tcol], as.numeric))          # 18 replicates x 21 time points
+  auc_vec <- apply(Mat, 1, function(y)
+                   sum(diff(time_pts) * (head(y, -1) + tail(y, -1)) / 2))  # trapezoidal AUC 0-72 h
+  metrics_B <- data.frame(
+    condition = fab_B$condition,
+    OD72 = as.numeric(fab_B$t72),
+    OD24 = as.numeric(fab_B$t24),
+    AUC  = auc_vec
+  )
+
+  label_map_B <- c("+ maltose"         = "FAB + maltose",
+                   "+ strain-specific" = "FAB + galactose",
+                   "+ thiamine"        = "FAB + thiamine",
+                   "+ all three"       = "FAB + maltose+galactose+thiamine",
+                   "+ urea (negative)" = "FAB + urea")
+
+  run_dunnett <- function(df, yvar, readout_label, digits) {
+    fit  <- aov(as.formula(paste(yvar, "~ condition")), data = df)
+    g    <- multcomp::glht(fit, linfct = multcomp::mcp(condition = "Dunnett"))
+    cf   <- confint(g)$confint            # Estimate / lwr / upr, simultaneous 95%
+    pv   <- summary(g)$test$pvalues       # single-step adjusted p
+    arms <- rownames(cf)                  # e.g. "+ maltose - Baseline"
+    ac   <- sub(" - Baseline$", "", arms)
+    data.frame(
+      comparison     = unname(label_map_B[ac]),
+      readout        = readout_label,
+      baseline_mean  = round(mean(df[[yvar]][df$condition == "Baseline"]), digits),
+      condition_mean = round(sapply(ac, function(cc) mean(df[[yvar]][df$condition == cc])), digits),
+      difference     = round(cf[, "Estimate"], digits),
+      CI95_low       = round(cf[, "lwr"], digits),
+      CI95_high      = round(cf[, "upr"], digits),
+      adj_p_value    = signif(as.numeric(pv), 3),
+      n              = 3L,
+      row.names      = NULL, stringsAsFactors = FALSE
+    )
+  }
+
+  contrasts_B <- rbind(
+    run_dunnett(metrics_B, "OD72", "72-h endpoint OD600 (primary)",    3),
+    run_dunnett(metrics_B, "AUC",  "AUC 0-72 h (OD*h, secondary)",     1),
+    run_dunnett(metrics_B, "OD24", "24-h endpoint OD600 (secondary)",  3)
+  )
+
+  write.csv(contrasts_B, file.path(out_dir, "Fig6_FAB_factorial_contrasts.csv"),
+            row.names = FALSE)
+  cat("\nSH_0542 FAB factorial planned contrasts (Dunnett vs FAB-alone baseline):\n")
+  print(contrasts_B, row.names = FALSE)
+  cat("Saved: Fig6_FAB_factorial_contrasts.csv (reproduces Supplementary Table S12g)\n")
+}
